@@ -150,13 +150,30 @@ function MediaTracker:addToMainMenu(menu_items)
 end
 
 function MediaTracker:showLogin()
-    self.LoginDialog.show(self.path, function(email, password)
-        self:login(email, password)
+    self.LoginDialog.showEmailStep(function(email)
+        self:requestCode(email)
     end)
 end
 
-function MediaTracker:login(email, password)
-    local status, response = self.Api.login(email, password)
+function MediaTracker:requestCode(email)
+    local status, response = self.Api.requestCode(email)
+
+    if status == 200 then
+        self.LoginDialog.showCodeStep(email,
+            function(code) self:verifyCode(email, code) end,
+            function() self:showLogin() end
+        )
+    else
+        local msg = (response and response.message) or _("Error de conexión")
+        UIManager:show(InfoMessage:new{
+            text = _("Error al enviar código: ") .. tostring(msg),
+            timeout = 4,
+        })
+    end
+end
+
+function MediaTracker:verifyCode(email, code)
+    local status, response = self.Api.verifyCode(email, code)
 
     if status == 200 and response and response.success then
         self:saveToken(response.token)
@@ -167,7 +184,7 @@ function MediaTracker:login(email, password)
     else
         local msg = (response and response.message) or _("Error de conexión")
         UIManager:show(InfoMessage:new{
-            text = _("Error al iniciar sesión: ") .. tostring(msg),
+            text = _("Error al verificar código: ") .. tostring(msg),
             timeout = 4,
         })
     end

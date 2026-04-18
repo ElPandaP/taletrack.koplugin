@@ -56,11 +56,12 @@ local function post(path, body, token)
     return status, response
 end
 
-function Api.login(email, password)
-    return post("/api/login", {
-        Email = email,
-        Password = password,
-    })
+function Api.requestCode(email)
+    return post("/api/auth/request-code", { Email = email })
+end
+
+function Api.verifyCode(email, code)
+    return post("/api/auth/verify-code", { Email = email, Code = code })
 end
 
 function Api.trackBook(token, title, pages)
