@@ -63,13 +63,15 @@ function MediaTracker:hookBookStatusWidget()
                 return
             end
 
-            plugin:syncBook(title, pages, bsw.doc_settings)
+            plugin:syncBook(title, pages, bsw.doc_settings, bsw.props)
         end
     end
 end
 
-function MediaTracker:syncBook(title, pages, doc_settings)
-    local status, response = self.Api.trackBook(self.token, title, pages)
+function MediaTracker:syncBook(title, pages, doc_settings, props)
+    local author = props and props.authors and props.authors ~= "" and props.authors or nil
+    local isbn   = props and props.isbn    and props.isbn    ~= "" and props.isbn    or nil
+    local status, response = self.Api.trackBook(self.token, title, pages, author, isbn)
 
     if status == 200 and response and response.success then
         if doc_settings then
@@ -117,7 +119,7 @@ function MediaTracker:onCloseDocument()
         ok_text = _("Sí"),
         cancel_text = _("No"),
         ok_callback = function()
-            self:syncBook(title, total_pages, self.ui.doc_settings)
+            self:syncBook(title, total_pages, self.ui.doc_settings, props)
         end,
     })
 end

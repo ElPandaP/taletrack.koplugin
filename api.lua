@@ -64,13 +64,16 @@ function Api.verifyCode(email, code)
     return post("/api/auth/verify-code", { Email = email, Code = code })
 end
 
-function Api.trackBook(token, title, pages)
-    return post("/api/tracking", {
-        Title = title,
-        Type = "Book",
-        Length = pages,
+function Api.trackBook(token, title, pages, author, isbn)
+    local body = {
+        Title    = title,
+        Type     = "Book",
+        Length   = pages,
         Progress = 100,
-    }, token)
+    }
+    if author and author ~= "" then body.Author = author end
+    if isbn   and isbn   ~= "" then body.Isbn   = isbn   end
+    return post("/api/tracking", body, token)
 end
 
 return Api
