@@ -1,4 +1,4 @@
--- handles all HTTP communication with the MediaTracker backend
+-- handles all HTTP communication with the TaleTrack backend
 -- change SERVER_URL when the server moves
 
 local ltn12 = require("ltn12")
@@ -42,7 +42,7 @@ local function post(path, body, token)
     })
 
     if not ok then
-        logger.warn("MediaTracker: request failed:", status)
+        logger.warn("TaleTrack: request failed:", status)
         return nil, { success = false, message = tostring(status) }
     end
 

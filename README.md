@@ -1,2 +1,2 @@
-# MediaTracker-koreader
-Plugin of KOReader for MediaTracker
+# TaleTrack-koreader
+Plugin of KOReader for TaleTrack
