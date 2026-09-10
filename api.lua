@@ -5,7 +5,14 @@ local ltn12 = require("ltn12")
 local rapidjson = require("rapidjson")
 local logger = require("logger")
 
+-- socketutil lets us set short timeouts so a dead network fails in seconds
+-- instead of hanging on the default (very long) socket timeout.
+local socketutil_ok, socketutil = pcall(require, "socketutil")
+
 local SERVER_URL = "http://143.47.54.63"
+
+local BLOCK_TIMEOUT = 3   -- seconds with no data before giving up
+local TOTAL_TIMEOUT = 12  -- seconds for the whole request
 
 local Api = {}
 
@@ -18,6 +25,8 @@ local function getHttpLib(url)
     return require("socket.http")
 end
 
+-- Returns: status (HTTP code number) or nil on transport failure,
+--          response (parsed JSON table, or { success=false, message=... })
 local function post(path, body, token)
     local url = SERVER_URL .. path
     local body_json = rapidjson.encode(body)
@@ -32,6 +41,8 @@ local function post(path, body, token)
         headers["Authorization"] = "Bearer " .. token
     end
 
+    if socketutil_ok then socketutil:set_timeout(BLOCK_TIMEOUT, TOTAL_TIMEOUT) end
+
     local lib = getHttpLib(url)
     local ok, status = lib.request({
         url = url,
@@ -41,12 +52,13 @@ local function post(path, body, token)
         sink = ltn12.sink.table(response_chunks),
     })
 
+    if socketutil_ok then socketutil:reset_timeout() end
+
     if not ok then
         logger.warn("TaleTrack: request failed:", status)
         return nil, { success = false, message = tostring(status) }
     end
 
-    -- try to parse json, fall back to raw string if the server returns something unexpected
     local response_str = table.concat(response_chunks)
     local parse_ok, response = pcall(rapidjson.decode, response_str)
     if not parse_ok then
@@ -66,14 +78,20 @@ function Api.verifyCode(email, code)
     return post("/api/auth/verify-code", { Email = email, Code = code })
 end
 
-function Api.trackBook(token, title, pages, author, isbn)
+-- Trades a refresh token for a fresh access + refresh pair (the backend rotates it).
+function Api.refresh(refresh_token)
+    return post("/api/auth/refresh", { refreshToken = refresh_token })
+end
+
+-- item = { title, pages, progress (0-100), author?, isbn? }
+function Api.trackBook(token, item)
     local body = {
-        Title    = title,
-        Pages    = pages,
-        Progress = 100,
+        Title    = item.title,
+        Pages    = item.pages,
+        Progress = item.progress,
     }
-    if author and author ~= "" then body.Author = author end
-    if isbn   and isbn   ~= "" then body.Isbn   = isbn   end
+    if item.author and item.author ~= "" then body.Author = item.author end
+    if item.isbn   and item.isbn   ~= "" then body.Isbn   = item.isbn   end
     return post("/api/tracking/books", body, token)
 end
 
