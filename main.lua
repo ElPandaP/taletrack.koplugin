@@ -149,25 +149,46 @@ function TaleTrack:addToMainMenu(menu_items)
     }
 end
 
+-- Two-step OTP login: email -> request a code -> verify it.
 function TaleTrack:showLogin()
-    self.LoginDialog.show(self.path, function(email, password)
-        self:login(email, password)
+    self.LoginDialog.showEmailStep(function(email)
+        self:requestCode(email)
     end)
 end
 
-function TaleTrack:login(email, password)
-    local status, response = self.Api.login(email, password)
+function TaleTrack:requestCode(email)
+    local status, response = self.Api.requestCode(email)
 
     if status == 200 and response and response.success then
+        self.LoginDialog.showCodeStep(email, function(code)
+            self:verifyCode(email, code)
+        end, function()
+            self:showLogin()
+        end)
+    else
+        local msg = (response and response.message and response.message ~= "" and response.message)
+            or _("Error de conexión")
+        UIManager:show(InfoMessage:new{
+            text = _("Error al enviar el código: ") .. tostring(msg),
+            timeout = 4,
+        })
+    end
+end
+
+function TaleTrack:verifyCode(email, code)
+    local status, response = self.Api.verifyCode(email, code)
+
+    if status == 200 and response and response.success and response.token then
         self:saveToken(response.token)
         UIManager:show(InfoMessage:new{
             text = _("Sesión iniciada correctamente"),
             timeout = 2,
         })
     else
-        local msg = (response and response.message) or _("Error de conexión")
+        local msg = (response and response.message and response.message ~= "" and response.message)
+            or _("Código incorrecto o caducado")
         UIManager:show(InfoMessage:new{
-            text = _("Error al iniciar sesión: ") .. tostring(msg),
+            text = _("Error al verificar el código: ") .. tostring(msg),
             timeout = 4,
         })
     end

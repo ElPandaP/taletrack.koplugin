@@ -67,13 +67,12 @@ end
 function Api.trackBook(token, title, pages, author, isbn)
     local body = {
         Title    = title,
-        Type     = "Book",
-        Length   = pages,
+        Pages    = pages,
         Progress = 100,
     }
     if author and author ~= "" then body.Author = author end
     if isbn   and isbn   ~= "" then body.Isbn   = isbn   end
-    return post("/api/tracking", body, token)
+    return post("/api/tracking/books", body, token)
 end
 
 return Api
