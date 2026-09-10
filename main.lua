@@ -4,7 +4,6 @@ local InfoMessage = require("ui/widget/infomessage")
 local ConfirmBox = require("ui/widget/confirmbox")
 local DataStorage = require("datastorage")
 local LuaSettings = require("luasettings")
-local _ = require("gettext")
 
 local TaleTrack = WidgetContainer:extend{
     name = "TaleTrack",
@@ -14,6 +13,10 @@ local TaleTrack = WidgetContainer:extend{
 function TaleTrack:init()
     self.Api = dofile(self.path .. "/api.lua")
     self.LoginDialog = dofile(self.path .. "/login_dialog.lua")
+
+    local i18n = dofile(self.path .. "/i18n.lua").setup()
+    self.lang = i18n.lang
+    self.t = i18n.t
 
     self.settings = LuaSettings:open(DataStorage:getSettingsDir() .. "/TaleTrack.lua")
     self.token = self.settings:readSetting("token")
@@ -47,7 +50,7 @@ function TaleTrack:hookBookStatusWidget()
 
             -- get title from the widget's props (set by whoever opens BookStatusWidget)
             local title = (bsw.props and bsw.props.title and bsw.props.title ~= "")
-                and bsw.props.title or "Desconocido"
+                and bsw.props.title or plugin.t("unknown_book")
 
             -- page count can live under different keys depending on KOReader version
             local pages = 1
@@ -77,19 +80,19 @@ function TaleTrack:syncBook(title, pages, doc_settings)
             doc_settings:flush()
         end
         UIManager:show(InfoMessage:new{
-            text = '"' .. title .. '" ' .. _("registrado como finalizado"),
+            text = '"' .. title .. '" ' .. self.t("registered_finished"),
             timeout = 3,
         })
     elseif status == 401 then
         self:saveToken(nil)
         UIManager:show(InfoMessage:new{
-            text = _("Sesión expirada. Por favor inicia sesión de nuevo."),
+            text = self.t("session_expired"),
             timeout = 4,
         })
     else
-        local msg = (response and response.message) or _("Error desconocido")
+        local msg = (response and response.message) or self.t("unknown_error")
         UIManager:show(InfoMessage:new{
-            text = _("Error al registrar: ") .. tostring(msg),
+            text = self.t("register_error", msg),
             timeout = 4,
         })
     end
@@ -110,12 +113,12 @@ function TaleTrack:onCloseDocument()
     local props = self.ui.document:getProps()
     local title = (props and props.title and props.title ~= "") and props.title
         or (self.view and self.view.document_title)
-        or "Desconocido"
+        or self.t("unknown_book")
 
     UIManager:show(ConfirmBox:new{
-        text = _("Has llegado al final de \"") .. title .. _("\". ¿Registrarlo como finalizado en TaleTrack?"),
-        ok_text = _("Sí"),
-        cancel_text = _("No"),
+        text = self.t("reached_end", title),
+        ok_text = self.t("yes"),
+        cancel_text = self.t("no"),
         ok_callback = function()
             self:syncBook(title, total_pages, self.ui.doc_settings)
         end,
@@ -130,12 +133,12 @@ end
 
 function TaleTrack:addToMainMenu(menu_items)
     menu_items.TaleTrack = {
-        text = _("TaleTrack"),
+        text = "TaleTrack",
         sorting_hint = "tools",
         sub_item_table = {
             {
                 text_func = function()
-                    return self.token and _("Cerrar sesión") or _("Iniciar sesión")
+                    return self.token and self.t("sign_out") or self.t("sign_in")
                 end,
                 callback = function()
                     if self.token then
@@ -151,25 +154,25 @@ end
 
 -- Two-step OTP login: email -> request a code -> verify it.
 function TaleTrack:showLogin()
-    self.LoginDialog.showEmailStep(function(email)
+    self.LoginDialog.showEmailStep(self.t, function(email)
         self:requestCode(email)
     end)
 end
 
 function TaleTrack:requestCode(email)
-    local status, response = self.Api.requestCode(email)
+    local status, response = self.Api.requestCode(email, self.lang)
 
     if status == 200 and response and response.success then
-        self.LoginDialog.showCodeStep(email, function(code)
+        self.LoginDialog.showCodeStep(self.t, email, function(code)
             self:verifyCode(email, code)
         end, function()
             self:showLogin()
         end)
     else
         local msg = (response and response.message and response.message ~= "" and response.message)
-            or _("Error de conexión")
+            or self.t("connection_error")
         UIManager:show(InfoMessage:new{
-            text = _("Error al enviar el código: ") .. tostring(msg),
+            text = self.t("send_code_error", msg),
             timeout = 4,
         })
     end
@@ -181,14 +184,14 @@ function TaleTrack:verifyCode(email, code)
     if status == 200 and response and response.success and response.token then
         self:saveToken(response.token)
         UIManager:show(InfoMessage:new{
-            text = _("Sesión iniciada correctamente"),
+            text = self.t("signed_in"),
             timeout = 2,
         })
     else
         local msg = (response and response.message and response.message ~= "" and response.message)
-            or _("Código incorrecto o caducado")
+            or self.t("code_invalid")
         UIManager:show(InfoMessage:new{
-            text = _("Error al verificar el código: ") .. tostring(msg),
+            text = self.t("verify_code_error", msg),
             timeout = 4,
         })
     end
@@ -197,7 +200,7 @@ end
 function TaleTrack:logout()
     self:saveToken(nil)
     UIManager:show(InfoMessage:new{
-        text = _("Sesión cerrada"),
+        text = self.t("signed_out"),
         timeout = 2,
     })
 end

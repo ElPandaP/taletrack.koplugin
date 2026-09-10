@@ -2,7 +2,7 @@
 return {
     name        = "TaleTrack",
     fullname    = "TaleTrack",
-    description = [[Registra libros finalizados en tu servidor TaleTrack.
-Inicia sesión con tu cuenta y marca libros como finalizados desde el menú del lector.]],
+    description = [[Records finished books to your TaleTrack server.
+Sign in with your account and mark books as finished from the reader menu.]],
     version     = 1,
 }

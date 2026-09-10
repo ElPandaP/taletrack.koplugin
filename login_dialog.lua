@@ -1,27 +1,27 @@
 -- two-step OTP login dialog
 -- step 1: email input → step 2: 6-digit code verification
+-- `t` is the translator from i18n.lua, passed in by main.lua.
 
 local InputDialog = require("ui/widget/inputdialog")
 local UIManager = require("ui/uimanager")
-local _ = require("gettext")
 
 local LoginDialog = {}
 
-function LoginDialog.showEmailStep(onEmailSubmit)
+function LoginDialog.showEmailStep(t, onEmailSubmit)
     local dialog
     dialog = InputDialog:new{
-        title = _("TaleTrack - Iniciar sesión"),
-        input_hint = _("tu@email.com"),
+        title = t("login_title"),
+        input_hint = t("email_hint"),
         input_type = "text",
         buttons = {{
             {
-                text = _("Cancelar"),
+                text = t("cancel"),
                 callback = function()
                     UIManager:close(dialog)
                 end,
             },
             {
-                text = _("Enviar código"),
+                text = t("send_code"),
                 is_enter_default = true,
                 callback = function()
                     local email = dialog:getInputText()
@@ -29,7 +29,7 @@ function LoginDialog.showEmailStep(onEmailSubmit)
                     if email == "" then
                         local InfoMessage = require("ui/widget/infomessage")
                         UIManager:show(InfoMessage:new{
-                            text = _("Por favor introduce tu email"),
+                            text = t("enter_email"),
                             timeout = 3,
                         })
                         return
@@ -43,23 +43,23 @@ function LoginDialog.showEmailStep(onEmailSubmit)
 end
 
 -- onBack is called when the user wants to re-enter their email
-function LoginDialog.showCodeStep(email, onCodeSubmit, onBack)
+function LoginDialog.showCodeStep(t, email, onCodeSubmit, onBack)
     local dialog
     dialog = InputDialog:new{
-        title = _("Introduce el código"),
-        description = _("Código enviado a ") .. email,
-        input_hint = _("000000"),
+        title = t("enter_code_title"),
+        description = t("code_sent_to", email),
+        input_hint = t("code_hint"),
         input_type = "number",
         buttons = {{
             {
-                text = _("Volver"),
+                text = t("back"),
                 callback = function()
                     UIManager:close(dialog)
                     if onBack then onBack() end
                 end,
             },
             {
-                text = _("Verificar"),
+                text = t("verify"),
                 is_enter_default = true,
                 callback = function()
                     local code = dialog:getInputText()
@@ -67,7 +67,7 @@ function LoginDialog.showCodeStep(email, onCodeSubmit, onBack)
                     if code == "" then
                         local InfoMessage = require("ui/widget/infomessage")
                         UIManager:show(InfoMessage:new{
-                            text = _("Por favor introduce el código"),
+                            text = t("enter_code"),
                             timeout = 3,
                         })
                         return

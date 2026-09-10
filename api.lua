@@ -56,8 +56,10 @@ local function post(path, body, token)
     return status, response
 end
 
-function Api.requestCode(email)
-    return post("/api/auth/request-code", { Email = email })
+function Api.requestCode(email, locale)
+    local body = { Email = email }
+    if locale and locale ~= "" then body.Locale = locale end
+    return post("/api/auth/request-code", body)
 end
 
 function Api.verifyCode(email, code)
